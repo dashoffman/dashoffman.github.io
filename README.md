@@ -1,52 +1,53 @@
-# Guild Stash Tracker — setup
+# Guild Stash Tracker
 
-A static site (plain HTML/CSS/JS, no build step) backed by Supabase (Postgres) for
-shared data, and a GitHub Actions cron job that pulls prices from poe.ninja.
+A static site (plain HTML/CSS/JS, no build step) at https://dashoffman.github.io/,
+backed by Supabase (Postgres) for shared data, and a GitHub Actions job that pulls
+prices from poe.ninja every hour.
 
-## 1. Create the Supabase project
+Everything is already set up and live: Supabase project created and schema applied,
+GitHub Pages enabled, and the price-fetch job running hourly with real data flowing
+in. What follows is how to maintain it.
 
-1. [supabase.com](https://supabase.com) → sign in → New project.
-2. Once it's up: **SQL Editor** → paste the contents of [`schema.sql`](schema.sql) → Run.
-   This creates all tables, seeds the four members with placeholder PINs
-   (`1111`/`2222`/`3333`/`4444` for Garrett/Zach/Jordan/Justin), and seeds the
-   currency list. **Change the PINs** afterwards:
-   ```sql
-   update members set pin = '5309' where id = 'garrett';
-   ```
-3. **Project Settings → API**: copy the **Project URL** and **anon public** key into
-   [`js/config.js`](js/config.js). These are safe to be public — real access control
-   is enforced by the Postgres Row Level Security policies in `schema.sql`, not by
-   keeping this key secret.
+## Changing PINs
 
-## 2. Wire up the price-fetch job
+The four members were seeded with placeholder PINs. Change them any time in the
+Supabase SQL Editor:
 
-1. In your GitHub repo → **Settings → Secrets and variables → Actions**:
-   - **Secrets** → add `SUPABASE_URL` (same Project URL as above) and
-     `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API → `service_role` key —
-     keep this one out of client code, it bypasses Row Level Security).
-   - **Variables** → add `POE_LEAGUE` set to the exact league name as it appears
-     on poe.ninja (e.g. the current PoE2 challenge league).
-2. **Verify the poe.ninja endpoint** — poe.ninja doesn't publish a documented,
-   stable API, and [`scripts/fetch-prices.sh`](scripts/fetch-prices.sh) assumes the
-   same `api/data/currencyoverview` / `api/data/itemoverview` shape PoE1 uses. Before
-   relying on this: open poe.ninja's PoE2 economy page, open devtools → Network,
-   reload, and find the request that returns currency/item prices. If the URL differs,
-   update `PONINJA_BASE_URL` (and the `PONINJA_CURRENCY_TYPES` / `PONINJA_ITEM_TYPES`
-   env vars) at the top of the script.
-3. Once secrets are set, go to the **Actions** tab → "Update currency prices" →
-   **Run workflow** to trigger it manually and confirm it succeeds (check the logs —
-   it'll tell you exactly which currency it couldn't price if something's off). It
-   otherwise runs automatically every hour.
+```sql
+update members set pin = '5309' where id = 'garrett';
+```
 
-## 3. Enable GitHub Pages
+## Switching the league
 
-**Settings → Pages** → Source: "Deploy from a branch" → Branch: `main` / `(root)`.
-Since this repo is `<username>.github.io`, it publishes at `https://<username>.github.io/`.
+The price-fetch job reads the league from a repo variable (**Settings → Secrets and
+variables → Actions → Variables → `POE_LEAGUE`**), currently set to `Runes of Aldur`
+since `Forbidden Rites` hadn't started yet and has no price history. Once Forbidden
+Rites is live, update that variable to `Forbidden Rites` (or whatever exact id
+[`/poe2/api/economy/leagues`](https://poe.ninja/poe2/api/economy/leagues) reports) —
+no code change needed, just the variable.
 
-## 4. First login
+## Investment affordability targets
 
-Pick your name, enter your PIN (change these from the placeholders — see step 1.2).
-There's no shared state until someone records a deposit — start on the Ledger page.
+`threshold_target` in the `currencies` table is the "fully funded" div amount shown
+on the Investments page's progress bars. Adjust per-item any time:
+
+```sql
+update currencies set threshold_target = 300 where id = 'mirror';
+```
+
+## Adding a new tracked currency
+
+Insert a row into `currencies` (and, if it should be priced automatically, a matching
+entry in [`scripts/currency-map.json`](scripts/currency-map.json) pointing at its
+poe.ninja `type`/`id` — see [`scripts/fetch-prices.sh`](scripts/fetch-prices.sh) for
+how to look those up via https://poe.ninja/docs/api). Everything else (the ledger,
+holdings math, unit engine) works off that table with no other changes.
+
+## Re-running or debugging the price fetch
+
+**Actions tab → "Update currency prices" → Run workflow** triggers it manually; check
+the run's logs if a currency's price didn't update (it warns by name rather than
+failing silently). It otherwise runs automatically at :05 past every hour.
 
 ## How it works / design notes
 
@@ -64,3 +65,6 @@ There's no shared state until someone records a deposit — start on the Ledger 
   (units, value-per-unit, holdings) is stored — it's all replayed from the raw
   transaction/investment/split event log plus the price history, so there's no
   drift between the ledger and what's displayed.
+- **Prices are Divine-denominated at the source** — poe.ninja's PoE2 exchange-overview
+  API quotes every price directly in Divine Orbs (`core.primary == "divine"`), so
+  `scripts/fetch-prices.sh` does a direct lookup with no chaos-orb conversion math.
