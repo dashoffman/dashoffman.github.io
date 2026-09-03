@@ -63,7 +63,8 @@ insert into currencies (id, name, category, glyph, color, sort_order, threshold_
 on conflict (id) do nothing;
 
 alter table currencies enable row level security;
-create policy if not exists "currencies readable by all" on currencies
+drop policy if exists "currencies readable by all" on currencies;
+create policy "currencies readable by all" on currencies
   for select using (true);
 
 -- ---------- price_history (written hourly by GitHub Action, service_role only) ----------
@@ -78,7 +79,8 @@ create table if not exists price_history (
 create index if not exists price_history_currency_ts_idx on price_history (currency_id, ts desc);
 
 alter table price_history enable row level security;
-create policy if not exists "price_history readable by all" on price_history
+drop policy if exists "price_history readable by all" on price_history;
+create policy "price_history readable by all" on price_history
   for select using (true);
 -- No insert/update/delete policy for anon/authenticated: only service_role (CI) can write.
 
@@ -94,9 +96,11 @@ create table if not exists transactions (
 );
 
 alter table transactions enable row level security;
-create policy if not exists "transactions readable by all" on transactions
+drop policy if exists "transactions readable by all" on transactions;
+create policy "transactions readable by all" on transactions
   for select using (true);
-create policy if not exists "transactions writable by all" on transactions
+drop policy if exists "transactions writable by all" on transactions;
+create policy "transactions writable by all" on transactions
   for insert with check (true);
 
 -- ---------- investments (pooled buy-ins) ----------
@@ -110,9 +114,11 @@ create table if not exists investments (
 );
 
 alter table investments enable row level security;
-create policy if not exists "investments readable by all" on investments
+drop policy if exists "investments readable by all" on investments;
+create policy "investments readable by all" on investments
   for select using (true);
-create policy if not exists "investments writable by all" on investments
+drop policy if exists "investments writable by all" on investments;
+create policy "investments writable by all" on investments
   for insert with check (true);
 
 create table if not exists investment_contributions (
@@ -123,9 +129,11 @@ create table if not exists investment_contributions (
 );
 
 alter table investment_contributions enable row level security;
-create policy if not exists "investment_contributions readable by all" on investment_contributions
+drop policy if exists "investment_contributions readable by all" on investment_contributions;
+create policy "investment_contributions readable by all" on investment_contributions
   for select using (true);
-create policy if not exists "investment_contributions writable by all" on investment_contributions
+drop policy if exists "investment_contributions writable by all" on investment_contributions;
+create policy "investment_contributions writable by all" on investment_contributions
   for insert with check (true);
 
 -- ---------- splits ----------
@@ -138,9 +146,11 @@ create table if not exists splits (
 );
 
 alter table splits enable row level security;
-create policy if not exists "splits readable by all" on splits
+drop policy if exists "splits readable by all" on splits;
+create policy "splits readable by all" on splits
   for select using (true);
-create policy if not exists "splits writable by all" on splits
+drop policy if exists "splits writable by all" on splits;
+create policy "splits writable by all" on splits
   for insert with check (true);
 
 create table if not exists split_participants (
@@ -150,7 +160,9 @@ create table if not exists split_participants (
 );
 
 alter table split_participants enable row level security;
-create policy if not exists "split_participants readable by all" on split_participants
+drop policy if exists "split_participants readable by all" on split_participants;
+create policy "split_participants readable by all" on split_participants
   for select using (true);
-create policy if not exists "split_participants writable by all" on split_participants
+drop policy if exists "split_participants writable by all" on split_participants;
+create policy "split_participants writable by all" on split_participants
   for insert with check (true);
