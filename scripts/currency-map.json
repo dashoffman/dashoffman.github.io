@@ -1,9 +1,9 @@
 [
-  { "id": "divine", "match": "Divine Orb" },
-  { "id": "exalted", "match": "Exalted Orb" },
-  { "id": "fracturing", "match": "Fracturing Orb" },
-  { "id": "mirror", "match": "Mirror of Kalandra" },
-  { "id": "hinekora", "match": "Hinekora's Lock" },
-  { "id": "omen_light", "match": "Omen of Light" },
-  { "id": "omen_whittling", "match": "Omen of Whittling" }
+  { "id": "divine", "ninjaType": "Currency", "ninjaId": "divine" },
+  { "id": "exalted", "ninjaType": "Currency", "ninjaId": "exalted" },
+  { "id": "fracturing", "ninjaType": "Currency", "ninjaId": "fracturing-orb" },
+  { "id": "mirror", "ninjaType": "Currency", "ninjaId": "mirror" },
+  { "id": "hinekora", "ninjaType": "Currency", "ninjaId": "hinekoras-lock" },
+  { "id": "omen_light", "ninjaType": "Ritual", "ninjaId": "omen-of-light" },
+  { "id": "omen_whittling", "ninjaType": "Ritual", "ninjaId": "omen-of-whittling" }
 ]
