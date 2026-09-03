@@ -1,0 +1,21 @@
+name: Update currency prices
+
+on:
+  schedule:
+    - cron: "5 * * * *" # every hour, at :05
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  fetch-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch poe.ninja prices and upsert into Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          POE_LEAGUE: ${{ vars.POE_LEAGUE }}
+        run: |
+          chmod +x scripts/fetch-prices.sh
+          ./scripts/fetch-prices.sh

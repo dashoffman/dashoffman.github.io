@@ -1,0 +1,9 @@
+[
+  { "id": "divine", "match": "Divine Orb" },
+  { "id": "exalted", "match": "Exalted Orb" },
+  { "id": "fracturing", "match": "Fracturing Orb" },
+  { "id": "mirror", "match": "Mirror of Kalandra" },
+  { "id": "hinekora", "match": "Hinekora's Lock" },
+  { "id": "omen_light", "match": "Omen of Light" },
+  { "id": "omen_whittling", "match": "Omen of Whittling" }
+]
