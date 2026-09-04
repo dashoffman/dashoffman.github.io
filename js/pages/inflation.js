@@ -12,7 +12,8 @@ const charts = {};
 const METRICS = [
   {
     key: "exaltsPerDivine",
-    label: "Exalted Orb per Divine Orb",
+    label: "Exalted per Divine",
+    shortLabel: "EX / DIV",
     unitLabel: "ex",
     currencyId: "divine",
     chartColor: "#c9a961",
@@ -20,7 +21,8 @@ const METRICS = [
   },
   {
     key: "divinesPerMirror",
-    label: "Divine Orb per Mirror of Kalandra",
+    label: "Divine per Mirror",
+    shortLabel: "DIV / MIR",
     unitLabel: "div",
     currencyId: "mirror",
     chartColor: "#5aa9e6",
@@ -29,6 +31,7 @@ const METRICS = [
   {
     key: "hinekoraPerMirror",
     label: "Hinekora's Lock per Mirror",
+    shortLabel: "HIN / MIR",
     unitLabel: "locks",
     currencyId: "hinekora",
     chartColor: "#b39ddb",
@@ -37,6 +40,7 @@ const METRICS = [
   {
     key: "omenPerMirror",
     label: "Omen of Light per Mirror",
+    shortLabel: "OoL / MIR",
     unitLabel: "omens",
     currencyId: "omen_light",
     chartColor: "#e85d75",
@@ -84,7 +88,10 @@ export function renderInflation(container, { state }) {
     const currency = currencyById[metric.currencyId];
     if (points.length === 0) {
       statRow.appendChild(
-        el("div", { class: "card" }, [el("div", { class: "stat-label" }, metric.label), el("div", { class: "stat-value" }, "—")])
+        el("div", { class: "card", title: metric.label }, [
+          el("div", { class: "stat-label" }, metric.shortLabel),
+          el("div", { class: "stat-value" }, "—"),
+        ])
       );
       continue;
     }
@@ -100,8 +107,8 @@ export function renderInflation(container, { state }) {
     const dayChangePct = valueDayAgo > 0 ? ((current - valueDayAgo) / valueDayAgo) * 100 : 0;
 
     statRow.appendChild(
-      el("div", { class: "card" }, [
-        el("div", { class: "stat-label" }, metric.label),
+      el("div", { class: "card", title: metric.label }, [
+        el("div", { class: "stat-label" }, metric.shortLabel),
         el("div", { class: "stat-value" }, [
           el("span", { style: currency ? `color:${currency.color}` : "" }, current.toFixed(2)),
           document.createTextNode(" " + metric.unitLabel),
@@ -160,8 +167,8 @@ export function renderInflation(container, { state }) {
       interaction: { mode: "index", intersect: false },
       plugins: { legend: { position: "bottom", labels: { color: "#9089a8", font: { family: "JetBrains Mono" } } } },
       scales: {
-        x: { ticks: { color: "#675e7d", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
-        y: { ticks: { color: "#675e7d", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+        x: { ticks: { color: "#948aac", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+        y: { ticks: { color: "#948aac", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
       },
     },
   });

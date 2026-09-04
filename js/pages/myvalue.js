@@ -61,8 +61,8 @@ export function renderMyValue(container, { state }) {
         maintainAspectRatio: false,
         plugins: { legend: { position: "bottom", labels: { color: "#9089a8", font: { family: "JetBrains Mono", size: 10 } } } },
         scales: {
-          x: { ticks: { color: "#675e7d", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
-          y: { ticks: { color: "#675e7d", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+          x: { ticks: { color: "#948aac", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+          y: { ticks: { color: "#948aac", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
         },
       },
     });
