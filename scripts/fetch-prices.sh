@@ -2,7 +2,10 @@
 # Pulls current currency prices from poe.ninja's documented PoE2 economy API
 # (https://poe.ninja/docs/api) and upserts an hourly price_history row per tracked
 # currency into Supabase, using the service_role key (server-side only — never ship
-# this key to the browser).
+# this key to the browser). Also logs the full raw response for each `type` fetched
+# into poe_ninja_snapshots, verbatim, so future features (new tracked items, volume/
+# sparkline data, etc.) have historical data to work with even though today's app
+# only extracts a handful of currencies' prices out of it.
 #
 # Endpoint: GET https://poe.ninja/poe2/api/economy/exchange/current/overview
 #             ?league={league}&type={type}
@@ -36,6 +39,7 @@ urlencode() { python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.a
 
 ts=$(date -u +"%Y-%m-%dT%H:00:00Z")
 rows="[]"
+snapshots="[]"
 
 for type in $(jq -r '[.[].ninjaType] | unique | .[]' "$MAP_FILE"); do
   echo "Fetching exchange overview type=$type league=$POE_LEAGUE ..."
@@ -43,6 +47,10 @@ for type in $(jq -r '[.[].ninjaType] | unique | .[]' "$MAP_FILE"); do
     echo "ERROR: request failed for type=$type — league name or endpoint is likely wrong." >&2
     continue
   }
+
+  snapshot=$(jq -n --arg pulled_at "$ts" --arg league "$POE_LEAGUE" --arg ninja_type "$type" --argjson response "$resp" \
+    '{pulled_at: $pulled_at, league: $league, ninja_type: $ninja_type, response: $response}')
+  snapshots=$(echo "$snapshots" | jq --argjson s "$snapshot" '. + [$s]')
 
   primary=$(echo "$resp" | jq -r '.core.primary // empty')
   if [ "$primary" != "divine" ]; then
@@ -67,6 +75,17 @@ for type in $(jq -r '[.[].ninjaType] | unique | .[]' "$MAP_FILE"); do
     rows=$(echo "$rows" | jq --argjson r "$row" '. + [$r]')
   done < <(jq -c '.[]' "$MAP_FILE")
 done
+
+snapshot_count=$(echo "$snapshots" | jq 'length')
+if [ "$snapshot_count" -gt 0 ]; then
+  echo "Logging $snapshot_count raw snapshot(s) ..."
+  curl -sf -X POST "${SUPABASE_URL}/rest/v1/poe_ninja_snapshots" \
+    -H "apikey: ${SUPABASE_SERVICE_ROLE_KEY}" \
+    -H "Authorization: Bearer ${SUPABASE_SERVICE_ROLE_KEY}" \
+    -H "Content-Type: application/json" \
+    -H "Prefer: return=minimal" \
+    -d "$snapshots"
+fi
 
 count=$(echo "$rows" | jq 'length')
 if [ "$count" -eq 0 ]; then

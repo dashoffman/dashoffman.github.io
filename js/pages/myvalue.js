@@ -89,8 +89,13 @@ export function renderMyValue(container, { state }) {
   for (const s of splits) {
     const participants = s.split_participants || [];
     if (participants.some((p) => p.member_id === loggedInMemberId)) {
-      const share = participants.length > 0 ? Number(s.sale_price_div) / participants.length : 0;
-      myEvents.push({ ts: new Date(s.ts).getTime(), kind: "split", desc: `${s.item_name} — share ${fmtDiv(share)}` });
+      if (s.status === "sold") {
+        const effectivePrice = s.final_price_div !== null && s.final_price_div !== undefined ? Number(s.final_price_div) : Number(s.sale_price_div);
+        const share = participants.length > 0 ? effectivePrice / participants.length : 0;
+        myEvents.push({ ts: new Date(s.sold_ts).getTime(), kind: "split", desc: `${s.item_name} — share ${fmtDiv(share)}` });
+      } else {
+        myEvents.push({ ts: new Date(s.ts).getTime(), kind: "pending", desc: `${s.item_name} — pending sale, not yet counted` });
+      }
     }
   }
   myEvents.sort((a, b) => b.ts - a.ts);
@@ -102,8 +107,9 @@ export function renderMyValue(container, { state }) {
     table.appendChild(el("thead", {}, el("tr", {}, [el("th", {}, "Date"), el("th", {}, "Type"), el("th", {}, "Detail")])));
     const tbody = el("tbody");
     for (const e of myEvents) {
+      const pillClass = e.kind === "withdrawal" ? "withdrawal" : e.kind === "pending" ? "pending" : "deposit";
       tbody.appendChild(
-        el("tr", {}, [el("td", {}, fmtDate(e.ts)), el("td", {}, el("span", { class: "pill " + (e.kind === "withdrawal" ? "withdrawal" : "deposit") }, e.kind)), el("td", {}, e.desc)])
+        el("tr", {}, [el("td", {}, fmtDate(e.ts)), el("td", {}, el("span", { class: "pill " + pillClass }, e.kind)), el("td", {}, e.desc)])
       );
     }
     table.appendChild(tbody);

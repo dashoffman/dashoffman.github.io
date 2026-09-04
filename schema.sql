@@ -10,12 +10,14 @@ create table if not exists members (
   color text not null
 );
 
-insert into members (id, name, pin, color) values
-  ('garrett', 'Garrett', '1111', '#c9a961'),
-  ('zach',    'Zach',    '2222', '#8b7fd6'),
-  ('jordan',  'Jordan',  '3333', '#6fae8f'),
-  ('justin',  'Justin',  '4444', '#c97b63')
-on conflict (id) do nothing;
+-- Members are already seeded with real PINs in production — not reseeded here so
+-- re-running this script never touches them. For a brand-new install, seed with:
+--   insert into members (id, name, pin, color) values
+--     ('garrett', 'Garrett', '1111', '#c9a961'),
+--     ('zach',    'Zach',    '2222', '#8b7fd6'),
+--     ('jordan',  'Jordan',  '3333', '#6fae8f'),
+--     ('justin',  'Justin',  '4444', '#c97b63')
+--   on conflict (id) do nothing;
 
 alter table members enable row level security;
 -- No policies granted on `members` itself -> anon/authenticated have zero access.
@@ -137,6 +139,10 @@ create policy "investment_contributions writable by all" on investment_contribut
   for insert with check (true);
 
 -- ---------- splits ----------
+-- A split starts 'pending' with just an asking price, and only counts toward the
+-- guild stash (unit crediting, stash value) once marked 'sold' — see js/ledgerMath.js.
+-- sale_price_div is the initial/asking price; final_price_div is an optional override
+-- entered at sale time (null means "sold at the asking price, no change").
 create table if not exists splits (
   id bigint generated always as identity primary key,
   item_name text not null,
@@ -145,6 +151,15 @@ create table if not exists splits (
   note text
 );
 
+alter table splits add column if not exists status text not null default 'pending';
+alter table splits add column if not exists final_price_div numeric;
+alter table splits add column if not exists sold_ts timestamptz;
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'splits_status_check') then
+    alter table splits add constraint splits_status_check check (status in ('pending', 'sold'));
+  end if;
+end $$;
+
 alter table splits enable row level security;
 drop policy if exists "splits readable by all" on splits;
 create policy "splits readable by all" on splits
@@ -152,6 +167,9 @@ create policy "splits readable by all" on splits
 drop policy if exists "splits writable by all" on splits;
 create policy "splits writable by all" on splits
   for insert with check (true);
+drop policy if exists "splits updatable by all" on splits;
+create policy "splits updatable by all" on splits
+  for update using (true) with check (true);
 
 create table if not exists split_participants (
   split_id bigint not null references splits(id) on delete cascade,
@@ -166,3 +184,24 @@ create policy "split_participants readable by all" on split_participants
 drop policy if exists "split_participants writable by all" on split_participants;
 create policy "split_participants writable by all" on split_participants
   for insert with check (true);
+
+-- ---------- poe_ninja_snapshots (raw hourly pull log, for future features) ----------
+-- One row per poe.ninja `type` fetched per hourly run, storing the full raw response
+-- verbatim (not just the handful of currencies price_history extracts) so future
+-- features (new tracked items, volume/sparkline data, etc.) don't need historical
+-- backfill — it's already sitting here. Written only by the GitHub Action (service_role).
+create table if not exists poe_ninja_snapshots (
+  id bigint generated always as identity primary key,
+  pulled_at timestamptz not null,
+  league text not null,
+  ninja_type text not null,
+  response jsonb not null
+);
+
+create index if not exists poe_ninja_snapshots_pulled_at_idx on poe_ninja_snapshots (pulled_at desc);
+
+alter table poe_ninja_snapshots enable row level security;
+drop policy if exists "poe_ninja_snapshots readable by all" on poe_ninja_snapshots;
+create policy "poe_ninja_snapshots readable by all" on poe_ninja_snapshots
+  for select using (true);
+-- No insert/update/delete policy for anon/authenticated: only service_role (CI) can write.

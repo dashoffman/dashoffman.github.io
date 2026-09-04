@@ -18,16 +18,24 @@ export function renderInvestments(container, { state, reload, showToast }) {
   affordPanel.appendChild(el("div", { class: "panel-title" }, `Affordability Tracker — ${fmtDiv(liquidValue)} liquid on hand`));
   for (const c of investmentCurrencies) {
     const price = priceAt(priceIndex, c.id, now);
-    const target = c.threshold_target || price || 1;
-    const pct = Math.min(100, (liquidValue / target) * 100);
     const row = el("div", { style: "margin-bottom:12px;" });
-    row.appendChild(
-      el("div", { style: "display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);" }, [
-        el("span", {}, `${c.name} (target ${fmtDiv(target)})`),
-        el("span", {}, fmtPct(pct)),
-      ])
-    );
-    row.appendChild(el("div", { class: "progress-track" }, el("div", { class: "progress-fill", style: `width:${pct}%` })));
+    if (price <= 0) {
+      row.appendChild(
+        el("div", { style: "display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);" }, [
+          el("span", {}, c.name),
+          el("span", { class: "muted" }, "no live price yet"),
+        ])
+      );
+    } else {
+      const pct = Math.min(100, (liquidValue / price) * 100);
+      row.appendChild(
+        el("div", { style: "display:flex;justify-content:space-between;font-size:12px;color:var(--text-dim);" }, [
+          el("span", {}, `${c.name} (live price ${fmtDiv(price)})`),
+          el("span", {}, fmtPct(pct)),
+        ])
+      );
+      row.appendChild(el("div", { class: "progress-track" }, el("div", { class: "progress-fill", style: `width:${pct}%` })));
+    }
     affordPanel.appendChild(row);
   }
   container.appendChild(affordPanel);
@@ -55,7 +63,13 @@ export function renderInvestments(container, { state, reload, showToast }) {
   for (const m of members) {
     const input = el("input", { type: "number", min: "0", step: "any", placeholder: "0.00" });
     contribInputs[m.id] = input;
-    contribWrap.appendChild(el("div", { class: "field" }, [el("label", {}, m.name + " contributes"), input]));
+    const myValue = (snap.units[m.id] || 0) * snap.vpu;
+    contribWrap.appendChild(
+      el("div", { class: "field" }, [
+        el("label", {}, [m.name + " contributes ", el("span", { class: "muted" }, `(has ${fmtDiv(myValue)})`)]),
+        input,
+      ])
+    );
   }
   formPanel.appendChild(contribWrap);
 

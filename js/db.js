@@ -66,3 +66,11 @@ export async function insertSplit({ item_name, sale_price_div, note, participant
   const { error: pErr } = await sb.from("split_participants").insert(rows);
   if (pErr) throw pErr;
 }
+
+export async function markSplitSold(splitId, finalPriceDiv) {
+  const { error } = await sb
+    .from("splits")
+    .update({ status: "sold", sold_ts: new Date().toISOString(), final_price_div: finalPriceDiv ?? null })
+    .eq("id", splitId);
+  if (error) throw error;
+}

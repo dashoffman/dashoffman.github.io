@@ -10,6 +10,10 @@
 //   - Investment buy-ins are funded out of the stash's Divine Orb holdings (i.e. the
 //     guild is assumed to convert everything to Divine before an investment purchase).
 //   - Split sale proceeds land in the stash as Divine Orb.
+//   - A split only becomes an event once marked 'sold' — a 'pending' split (just an
+//     asking price, no buyer yet) has no effect on holdings/units. The event fires at
+//     sold_ts (when the money actually arrived), not the split's original ts, and uses
+//     final_price_div if the seller entered one at sale time, else the asking price.
 
 export const BASE_CURRENCY = "divine";
 
@@ -44,10 +48,12 @@ export function buildEvents({ transactions, investments, splits }) {
   }
 
   for (const s of splits) {
+    if (s.status !== "sold") continue;
+    const effectivePrice = s.final_price_div !== null && s.final_price_div !== undefined ? Number(s.final_price_div) : Number(s.sale_price_div);
     events.push({
-      ts: new Date(s.ts).getTime(),
+      ts: new Date(s.sold_ts).getTime(),
       kind: "split",
-      salePriceDiv: Number(s.sale_price_div),
+      salePriceDiv: effectivePrice,
       participantIds: (s.split_participants || []).map((p) => p.member_id),
       ref: s,
     });

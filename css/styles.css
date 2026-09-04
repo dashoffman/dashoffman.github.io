@@ -387,6 +387,16 @@ tr:last-child td {
   color: var(--red);
 }
 
+.pill.sold {
+  background: rgba(111, 174, 143, 0.15);
+  color: var(--green);
+}
+
+.pill.pending {
+  background: rgba(201, 169, 97, 0.15);
+  color: var(--gold);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
