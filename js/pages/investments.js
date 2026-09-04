@@ -58,7 +58,7 @@ export function renderInvestments(container, { state, reload, showToast }) {
     ])
   );
 
-  const contribWrap = el("div", { class: "form-grid" });
+  const contribWrap = el("div", { class: "form-grid", style: "grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));" });
   const contribInputs = {};
   for (const m of members) {
     const input = el("input", { type: "number", min: "0", step: "any", placeholder: "0.00" });
@@ -66,7 +66,8 @@ export function renderInvestments(container, { state, reload, showToast }) {
     const myValue = (snap.units[m.id] || 0) * snap.vpu;
     contribWrap.appendChild(
       el("div", { class: "field" }, [
-        el("label", {}, [m.name + " contributes ", el("span", { class: "muted" }, `(has ${fmtDiv(myValue)})`)]),
+        el("label", {}, m.name + " contributes"),
+        el("div", { class: "muted", style: "text-transform:none;letter-spacing:normal;margin:-4px 0 6px;" }, `has ${fmtDiv(myValue)}`),
         input,
       ])
     );
