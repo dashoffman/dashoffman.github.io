@@ -11,15 +11,6 @@ const charts = {};
 
 const METRICS = [
   {
-    key: "exaltsPerDivine",
-    label: "Exalted per Divine",
-    shortLabel: "EX / DIV",
-    unitLabel: "ex",
-    currencyId: "divine",
-    chartColor: "#c9a961",
-    compute: (p) => (p.exalted > 0 ? 1 / p.exalted : null),
-  },
-  {
     key: "divinesPerMirror",
     label: "Divine per Mirror",
     shortLabel: "DIV / MIR",
@@ -38,13 +29,22 @@ const METRICS = [
     compute: (p) => (p.mirror > 0 && p.hinekora > 0 ? p.mirror / p.hinekora : null),
   },
   {
-    key: "omenPerMirror",
+    key: "omenLightPerMirror",
     label: "Omen of Light per Mirror",
     shortLabel: "OoL / MIR",
     unitLabel: "omens",
     currencyId: "omen_light",
     chartColor: "#e85d75",
-    compute: (p) => (p.mirror > 0 && p.omen > 0 ? p.mirror / p.omen : null),
+    compute: (p) => (p.mirror > 0 && p.omenLight > 0 ? p.mirror / p.omenLight : null),
+  },
+  {
+    key: "omenWhittlingPerMirror",
+    label: "Omen of Whittling per Mirror",
+    shortLabel: "OoW / MIR",
+    unitLabel: "omens",
+    currencyId: "omen_whittling",
+    chartColor: "#7fd6c0",
+    compute: (p) => (p.mirror > 0 && p.omenWhittling > 0 ? p.mirror / p.omenWhittling : null),
   },
 ];
 
@@ -64,10 +64,10 @@ export function renderInflation(container, { state }) {
   const times = [...new Set(priceHistory.map((r) => new Date(r.ts).getTime()))].sort((a, b) => a - b);
   const rows = times.map((t) => ({
     ts: t,
-    exalted: priceAt(priceIndex, "exalted", t),
     mirror: priceAt(priceIndex, "mirror", t),
     hinekora: priceAt(priceIndex, "hinekora", t),
-    omen: priceAt(priceIndex, "omen_light", t),
+    omenLight: priceAt(priceIndex, "omen_light", t),
+    omenWhittling: priceAt(priceIndex, "omen_whittling", t),
   }));
 
   const now = Date.now();

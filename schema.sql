@@ -56,8 +56,6 @@ create table if not exists currencies (
 
 insert into currencies (id, name, category, glyph, color, sort_order, threshold_target) values
   ('divine',      'Divine Orb',        'liquid',     'DIV', '#c9a961', 1, null),
-  ('exalted',     'Exalted Orb',       'liquid',     'EX',  '#d4c199', 2, null),
-  ('fracturing',  'Fracturing Orb',    'liquid',     'FRC', '#9fb8c9', 3, null),
   ('mirror',      'Mirror of Kalandra','investment', 'MIR', '#e6d3a3', 10, 250),
   ('hinekora',    'Hinekora''s Lock',  'investment', 'HIN', '#b39ddb', 11, 60),
   ('omen_light',  'Omen of Light',     'investment', 'OoL', '#f0e6c8', 12, 15),
@@ -205,3 +203,11 @@ drop policy if exists "poe_ninja_snapshots readable by all" on poe_ninja_snapsho
 create policy "poe_ninja_snapshots readable by all" on poe_ninja_snapshots
   for select using (true);
 -- No insert/update/delete policy for anon/authenticated: only service_role (CI) can write.
+
+-- ---------- migration: drop Exalted Orb / Fracturing Orb ----------
+-- Deposits/withdrawals/splits/investments are Divine-or-investment-currency only now.
+-- Safe to re-run: no-ops once these two rows are gone. Deletes price_history first
+-- since it has a foreign key into currencies; only run if no transaction/investment
+-- ever referenced these ids (true as of this migration — check first if unsure).
+delete from price_history where currency_id in ('exalted', 'fracturing');
+delete from currencies where id in ('exalted', 'fracturing');

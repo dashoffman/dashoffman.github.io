@@ -1,7 +1,5 @@
 [
   { "id": "divine", "ninjaType": "Currency", "ninjaId": "divine" },
-  { "id": "exalted", "ninjaType": "Currency", "ninjaId": "exalted" },
-  { "id": "fracturing", "ninjaType": "Currency", "ninjaId": "fracturing-orb" },
   { "id": "mirror", "ninjaType": "Currency", "ninjaId": "mirror" },
   { "id": "hinekora", "ninjaType": "Currency", "ninjaId": "hinekoras-lock" },
   { "id": "omen_light", "ninjaType": "Ritual", "ninjaId": "omen-of-light" },

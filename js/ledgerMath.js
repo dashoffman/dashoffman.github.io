@@ -166,34 +166,21 @@ export function replay(events, priceIndex, onStep) {
   return { holdings, units, totalUnits };
 }
 
-/**
- * Ownership makeup over time: at each event (deposit/withdrawal/investment_buy/split —
- * the only things that change who owns what), each member's percent share of the
- * stash. Share is price-independent between events, so this samples once per event
- * rather than at every price_history tick, then repeats the final split at "now" so
- * the chart line extends to the present.
- */
-export function ownershipShareSeries(events, priceIndex) {
-  const series = [];
-  replay(events, priceIndex, (snap) => {
-    const shares = {};
-    for (const [memberId, u] of Object.entries(snap.units)) {
-      shares[memberId] = snap.totalUnits > 0 ? (u / snap.totalUnits) * 100 : 0;
-    }
-    series.push({ ts: snap.ts, shares });
-  });
-  if (series.length > 0) {
-    series.push({ ts: Date.now(), shares: series[series.length - 1].shares });
-  }
-  return series;
-}
-
 /** Current snapshot: holdings, per-member units, total units, value-per-unit "now". */
 export function currentState(events, priceIndex, now = Date.now()) {
   const { holdings, units, totalUnits } = replay(events, priceIndex, null);
   const value = stashValue(holdings, priceIndex, now);
   const vpu = totalUnits > 0 ? value / totalUnits : 0;
   return { holdings, units, totalUnits, value, vpu, now };
+}
+
+/** Holdings as of a past timestamp — only events up to and including t have happened yet. */
+export function holdingsAt(events, priceIndex, t) {
+  return replay(
+    events.filter((e) => e.ts <= t),
+    priceIndex,
+    null
+  ).holdings;
 }
 
 /**
@@ -299,5 +286,100 @@ export function memberValueSeries(events, priceIndex, priceHistory, memberId, si
     });
   }
 
+  return series;
+}
+
+/**
+ * Investment performance: cost basis (total_cost_div at buy time) vs current market
+ * value (qty * priceAt(now)) for every pooled buy-in, plus aggregated per currency
+ * (multiple buy-ins of the same investment currency at different prices share one
+ * cost-basis pool) and a portfolio-wide total.
+ */
+export function investmentReturns(investments, priceIndex, now = Date.now()) {
+  const perInvestment = investments.map((inv) => {
+    const currencyId = inv.currency_id;
+    const qty = Number(inv.qty);
+    const costBasis = Number(inv.total_cost_div);
+    const price = priceAt(priceIndex, currencyId, now);
+    const currentValue = qty * price;
+    const gain = currentValue - costBasis;
+    return {
+      investment: inv,
+      currencyId,
+      qty,
+      costBasis,
+      price,
+      currentValue,
+      gain,
+      returnPct: costBasis > 0 ? (gain / costBasis) * 100 : null,
+      daysHeld: (now - new Date(inv.ts).getTime()) / 86400000,
+    };
+  });
+
+  const byCurrency = new Map();
+  for (const row of perInvestment) {
+    const agg = byCurrency.get(row.currencyId) || { currencyId: row.currencyId, qty: 0, costBasis: 0, currentValue: 0 };
+    agg.qty += row.qty;
+    agg.costBasis += row.costBasis;
+    agg.currentValue += row.currentValue;
+    byCurrency.set(row.currencyId, agg);
+  }
+  for (const agg of byCurrency.values()) {
+    agg.price = priceAt(priceIndex, agg.currencyId, now);
+    agg.avgCost = agg.qty > 0 ? agg.costBasis / agg.qty : 0;
+    agg.gain = agg.currentValue - agg.costBasis;
+    agg.returnPct = agg.costBasis > 0 ? (agg.gain / agg.costBasis) * 100 : null;
+  }
+
+  const totalCostBasis = perInvestment.reduce((s, r) => s + r.costBasis, 0);
+  const totalCurrentValue = perInvestment.reduce((s, r) => s + r.currentValue, 0);
+
+  return {
+    perInvestment,
+    byCurrency: [...byCurrency.values()].sort((a, b) => b.currentValue - a.currentValue),
+    totalCostBasis,
+    totalCurrentValue,
+    totalGain: totalCurrentValue - totalCostBasis,
+    totalReturnPct: totalCostBasis > 0 ? ((totalCurrentValue - totalCostBasis) / totalCostBasis) * 100 : null,
+  };
+}
+
+/**
+ * Cost-basis (step function, rises at each buy-in) vs market-value time series summed
+ * across every investment currency — one combined line for the whole investment
+ * portfolio's performance, using each currency's own poe.ninja price history.
+ * Starts at the first buy-in — there's nothing to plot before that.
+ */
+export function portfolioInvestmentSeries(investments, priceIndex) {
+  if (investments.length === 0) return [];
+  const sorted = [...investments].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  const currencyIds = [...new Set(sorted.map((i) => i.currency_id))];
+
+  const sampleTimes = new Set();
+  for (const currencyId of currencyIds) {
+    for (const p of priceIndex.get(currencyId) || []) sampleTimes.add(p.ts);
+  }
+  for (const inv of sorted) sampleTimes.add(new Date(inv.ts).getTime());
+  sampleTimes.add(Date.now());
+  const times = [...sampleTimes].sort((a, b) => a - b);
+
+  const qtyByCurrency = {};
+  let idx = 0,
+    costBasis = 0;
+  const series = [];
+  for (const t of times) {
+    while (idx < sorted.length && new Date(sorted[idx].ts).getTime() <= t) {
+      const inv = sorted[idx];
+      qtyByCurrency[inv.currency_id] = (qtyByCurrency[inv.currency_id] || 0) + Number(inv.qty);
+      costBasis += Number(inv.total_cost_div);
+      idx++;
+    }
+    if (idx === 0) continue;
+    let marketValue = 0;
+    for (const [currencyId, qty] of Object.entries(qtyByCurrency)) {
+      marketValue += qty * priceAt(priceIndex, currencyId, t);
+    }
+    series.push({ ts: t, marketValue, costBasis });
+  }
   return series;
 }
