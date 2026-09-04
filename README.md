@@ -26,6 +26,22 @@ Rites is live, update that variable to `Forbidden Rites` (or whatever exact id
 [`/poe2/api/economy/leagues`](https://poe.ninja/poe2/api/economy/leagues) reports) —
 no code change needed, just the variable.
 
+At the same time, flush the old league's cached price data in the Supabase SQL
+Editor. Neither `price_history` nor `poe_ninja_snapshots` has a `league` column, so
+without this the old league's prices and poe.ninja's raw historical cache sit
+back-to-back with the new league's completely different economy and nothing to tell
+them apart — corrupting the Inflation Index's "all-time" change and any chart that
+spans the transition:
+
+```sql
+delete from price_history;
+delete from poe_ninja_snapshots;
+```
+
+Nothing else depends on this data — `investments`/`transactions` store their own
+div amounts and quantities at the time they were recorded, not a live price lookup —
+so both tables start clean and refill on the next hourly pull.
+
 ## Investment affordability targets
 
 `threshold_target` in the `currencies` table is the "fully funded" div amount shown
