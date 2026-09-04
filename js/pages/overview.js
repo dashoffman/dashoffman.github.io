@@ -1,4 +1,4 @@
-import { currentState, stashValueSeries, priceAt } from "../ledgerMath.js";
+import { currentState, stashValueSeries, ownershipShareSeries, priceAt } from "../ledgerMath.js";
 import { fmtDiv, fmtQty, fmtPct, fmtDate, signClass, el } from "../format.js";
 
 const charts = {};
@@ -37,14 +37,6 @@ export function renderOverview(container, { state }) {
     el("div", { class: "card" }, [
       el("div", { class: "stat-label" }, "24h Change"),
       el("div", { class: "stat-value " + signClass(change) }, `${change >= 0 ? "+" : ""}${fmtDiv(change)} (${changePct.toFixed(1)}%)`),
-    ]),
-    el("div", { class: "card" }, [
-      el("div", { class: "stat-label" }, "Value / Unit"),
-      el("div", { class: "stat-value" }, fmtDiv(snap.vpu, 4)),
-    ]),
-    el("div", { class: "card" }, [
-      el("div", { class: "stat-label" }, "Total Units Outstanding"),
-      el("div", { class: "stat-value" }, fmtQty(snap.totalUnits, 4)),
     ]),
   ]);
   container.appendChild(statRow);
@@ -93,9 +85,16 @@ export function renderOverview(container, { state }) {
   }
   container.appendChild(holdingsPanel);
 
+  const ownershipOverTimePanel = el("div", { class: "panel" }, [
+    el("div", { class: "panel-title" }, "Ownership Over Time"),
+    el("div", { class: "chart-wrap" }, el("canvas", { id: "ownership-over-time-chart" })),
+  ]);
+  container.appendChild(ownershipOverTimePanel);
+
   // Charts
   destroyChart("value");
   destroyChart("ownership");
+  destroyChart("ownershipOverTime");
 
   const ctxValue = document.getElementById("value-chart");
   if (series.length > 0) {
@@ -140,7 +139,41 @@ export function renderOverview(container, { state }) {
       },
     });
   } else {
-    piePanel.appendChild(el("div", { class: "empty-state" }, "No units issued yet."));
+    piePanel.appendChild(el("div", { class: "empty-state" }, "No ownership recorded yet."));
+  }
+
+  const ctxOwnershipOverTime = document.getElementById("ownership-over-time-chart");
+  const ownershipSeries = ownershipShareSeries(events, priceIndex);
+  const membersWithShare = members.filter((m) => ownershipSeries.some((p) => (p.shares[m.id] || 0) > 0.0001));
+  if (ownershipSeries.length > 0 && membersWithShare.length > 0) {
+    charts.ownershipOverTime = new Chart(ctxOwnershipOverTime, {
+      type: "line",
+      data: {
+        labels: ownershipSeries.map((p) => fmtDate(p.ts)),
+        datasets: membersWithShare.map((m, i) => ({
+          label: m.name,
+          data: ownershipSeries.map((p) => p.shares[m.id] || 0),
+          borderColor: m.color,
+          backgroundColor: m.color + "55",
+          fill: i === 0 ? "origin" : "-1",
+          stepped: true,
+          tension: 0,
+          pointRadius: 0,
+        })),
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { position: "bottom", labels: { color: "#9089a8", font: { family: "JetBrains Mono" } } } },
+        scales: {
+          x: { ticks: { color: "#948aac", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+          y: { stacked: true, min: 0, max: 100, ticks: { color: "#948aac", font: { family: "JetBrains Mono", size: 10 }, callback: (v) => v + "%" }, grid: { color: "#1e1929" } },
+        },
+      },
+    });
+  } else {
+    ownershipOverTimePanel.appendChild(el("div", { class: "empty-state" }, "No ownership recorded yet."));
   }
 }
 
@@ -150,8 +183,8 @@ function chartOptions() {
     maintainAspectRatio: false,
     plugins: { legend: { display: false } },
     scales: {
-      x: { ticks: { color: "#675e7d", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
-      y: { ticks: { color: "#675e7d", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+      x: { ticks: { color: "#948aac", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+      y: { ticks: { color: "#948aac", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
     },
   };
 }

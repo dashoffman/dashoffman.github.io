@@ -5,6 +5,7 @@ import { renderLedger } from "./pages/ledger.js";
 import { renderInvestments } from "./pages/investments.js";
 import { renderSplits } from "./pages/splits.js";
 import { renderMyValue } from "./pages/myvalue.js";
+import { renderInflation } from "./pages/inflation.js";
 
 const LOGIN_STORAGE_KEY = "guildstash.loggedInMemberId";
 
@@ -14,6 +15,7 @@ const PAGES = {
   investments: renderInvestments,
   splits: renderSplits,
   myvalue: renderMyValue,
+  inflation: renderInflation,
 };
 
 const state = {

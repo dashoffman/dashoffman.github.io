@@ -1,5 +1,5 @@
 import { currentState, memberValueSeries } from "../ledgerMath.js";
-import { fmtDiv, fmtQty, fmtPct, fmtDate, el } from "../format.js";
+import { fmtDiv, fmtPct, fmtDate, el } from "../format.js";
 
 let chart = null;
 
@@ -15,7 +15,6 @@ export function renderMyValue(container, { state }) {
   container.appendChild(
     el("div", { class: "stat-row" }, [
       el("div", { class: "card" }, [el("div", { class: "stat-label" }, "Current Value"), el("div", { class: "stat-value" }, fmtDiv(myValue))]),
-      el("div", { class: "card" }, [el("div", { class: "stat-label" }, "Units Held"), el("div", { class: "stat-value" }, fmtQty(myUnits, 4))]),
       el("div", { class: "card" }, [
         el("div", { class: "stat-label" }, "Share of Stash"),
         el("div", { class: "stat-value" }, fmtPct(snap.totalUnits > 0 ? (myUnits / snap.totalUnits) * 100 : 0)),
@@ -62,8 +61,8 @@ export function renderMyValue(container, { state }) {
         maintainAspectRatio: false,
         plugins: { legend: { position: "bottom", labels: { color: "#9089a8", font: { family: "JetBrains Mono", size: 10 } } } },
         scales: {
-          x: { ticks: { color: "#675e7d", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
-          y: { ticks: { color: "#675e7d", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+          x: { ticks: { color: "#948aac", maxTicksLimit: 8, font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
+          y: { ticks: { color: "#948aac", font: { family: "JetBrains Mono", size: 10 } }, grid: { color: "#1e1929" } },
         },
       },
     });
