@@ -63,7 +63,12 @@ holdings math, unit engine) works off that table with no other changes.
 
 **Actions tab → "Update currency prices" → Run workflow** triggers it manually; check
 the run's logs if a currency's price didn't update (it warns by name rather than
-failing silently). It otherwise runs automatically at :05 past every hour.
+failing silently). It otherwise runs automatically at :37 past every hour — chosen
+to land away from the top-of-hour crunch when most other repos' cron jobs also
+fire, since GitHub Actions schedules are best-effort and can be delayed or
+silently skipped under load, especially in that busier window. Even at :37,
+occasional missed hours are expected; if a gap ever matters, use "Run workflow"
+above to backfill it manually.
 
 ## How it works / design notes
 

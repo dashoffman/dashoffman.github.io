@@ -2,7 +2,13 @@ name: Update currency prices
 
 on:
   schedule:
-    - cron: "5 * * * *" # every hour, at :05
+    # GitHub's cron scheduler is busiest (and most likely to silently drop a run)
+    # in the first few minutes of every hour, since that's when the vast majority
+    # of scheduled workflows across all of GitHub also fire. Running at :37 instead
+    # of :05 avoids that peak — still best-effort (GitHub Actions schedules are
+    # never guaranteed to fire exactly on time, or at all, under high load), but
+    # meaningfully more reliable.
+    - cron: "37 * * * *" # every hour, at :37
   workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
 
 jobs:
