@@ -166,6 +166,28 @@ export function replay(events, priceIndex, onStep) {
   return { holdings, units, totalUnits };
 }
 
+/**
+ * Ownership makeup over time: at each event (deposit/withdrawal/investment_buy/split —
+ * the only things that change who owns what), each member's percent share of the
+ * stash. Share is price-independent between events, so this samples once per event
+ * rather than at every price_history tick, then repeats the final split at "now" so
+ * the chart line extends to the present.
+ */
+export function ownershipShareSeries(events, priceIndex) {
+  const series = [];
+  replay(events, priceIndex, (snap) => {
+    const shares = {};
+    for (const [memberId, u] of Object.entries(snap.units)) {
+      shares[memberId] = snap.totalUnits > 0 ? (u / snap.totalUnits) * 100 : 0;
+    }
+    series.push({ ts: snap.ts, shares });
+  });
+  if (series.length > 0) {
+    series.push({ ts: Date.now(), shares: series[series.length - 1].shares });
+  }
+  return series;
+}
+
 /** Current snapshot: holdings, per-member units, total units, value-per-unit "now". */
 export function currentState(events, priceIndex, now = Date.now()) {
   const { holdings, units, totalUnits } = replay(events, priceIndex, null);
