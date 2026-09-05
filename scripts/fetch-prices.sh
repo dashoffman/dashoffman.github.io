@@ -11,10 +11,15 @@
 #             ?league={league}&type={type}
 # Response: { core: { primary, secondary, rates, items }, lines: [{ id, primaryValue, ... }] }
 # `core.primary` is the reference currency every line's `primaryValue` is quoted in.
-# For every PoE2 league so far that's "divine", which is exactly the div-equivalent
-# price this app wants — so no chaos-orb math is needed, just a direct lookup by id.
-# If poe.ninja ever changes the primary reference currency this script will notice
-# (see the check below) and fail loudly rather than silently writing wrong prices.
+# Most of the time that's "divine" — exactly the div-equivalent price this app
+# wants, so no conversion math is needed, just a direct lookup by id. Early in a
+# fresh league, though, Divine Orbs are still scarce enough that poe.ninja falls
+# back to quoting everything in Exalted instead (this happened at the start of
+# Forbidden Rites). When that happens, `core.rates.divine` is poe.ninja's own
+# ready-made Exalted-to-Divine conversion factor — multiplying every primaryValue
+# by it recovers the same Divine-equivalent price this app has always stored. If
+# core.rates.divine is ever missing too (no Divine trade data exists to compute a
+# rate from at all), the script fails loudly for that type rather than guessing.
 #
 # scripts/currency-map.json maps our currency ids to poe.ninja's `type` (category)
 # and `id` (line identifier) — e.g. Omens live under type=Ritual (poe.ninja names
@@ -53,9 +58,15 @@ for type in $(jq -r '[.[].ninjaType] | unique | .[]' "$MAP_FILE"); do
   snapshots=$(echo "$snapshots" | jq --argjson s "$snapshot" '. + [$s]')
 
   primary=$(echo "$resp" | jq -r '.core.primary // empty')
-  if [ "$primary" != "divine" ]; then
-    echo "ERROR: poe.ninja's primary reference currency for type=$type is '$primary', not 'divine' — the div-equivalent assumption in this script no longer holds. Skipping this type." >&2
-    continue
+  if [ "$primary" = "divine" ]; then
+    divRate=1
+  else
+    divRate=$(echo "$resp" | jq -r '.core.rates.divine // empty')
+    if [ -z "$divRate" ]; then
+      echo "ERROR: poe.ninja's primary reference currency for type=$type is '$primary', and no core.rates.divine conversion factor is available — can't derive Divine-equivalent prices. Skipping this type." >&2
+      continue
+    fi
+    echo "NOTE: type=$type is priced in '$primary' this run (Divine likely still scarce this early in the league) — converting via core.rates.divine=$divRate." >&2
   fi
 
   while IFS= read -r entry; do
@@ -70,8 +81,8 @@ for type in $(jq -r '[.[].ninjaType] | unique | .[]' "$MAP_FILE"); do
       continue
     fi
 
-    row=$(jq -n --arg cid "$id" --arg ts "$ts" --arg price "$price" \
-      '{currency_id: $cid, ts: $ts, div_price: ($price | tonumber)}')
+    row=$(jq -n --arg cid "$id" --arg ts "$ts" --arg price "$price" --arg rate "$divRate" \
+      '{currency_id: $cid, ts: $ts, div_price: (($price | tonumber) * ($rate | tonumber))}')
     rows=$(echo "$rows" | jq --argjson r "$row" '. + [$r]')
   done < <(jq -c '.[]' "$MAP_FILE")
 done
